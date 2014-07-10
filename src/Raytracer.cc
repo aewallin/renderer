@@ -23,10 +23,14 @@
 #include <sstream>
 #include <cfloat>
 
+/*
 #ifdef USE_TBB
 #include "tbb/blocked_range.h"
 #include "tbb/parallel_for.h"
 #endif
+*/
+
+#define USE_OPENMP
 
 #ifdef USE_OPENMP
 #include <omp.h>
