@@ -63,11 +63,8 @@ struct Scene {
 
     // Cache-friendly version of the Bounding Volume Hierarchy data
     // (creation functions)
-    void PopulateCacheFriendlyBVH(
-	Triangle *pFirstTriangle,
-	BVHNode *root,
-	unsigned& idxBoxes,
-	unsigned& idxTriList);
+    void PopulateCacheFriendlyBVH( Triangle *pFirstTriangle, BVHNode *root,
+									unsigned& idxBoxes, unsigned& idxTriList);
     void CreateCFBVH();
 
     // Creates BVH and Cache-friendly version of BVH

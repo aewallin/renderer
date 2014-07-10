@@ -95,7 +95,9 @@
 //#endif
 
 // Helper function, that checks whether a ray intersects a bbox
-inline bool RayIntersectsBox(const Vector3& originInWorldSpace, const Vector3& rayInWorldSpace, CacheFriendlyBVHNode *pBox)
+inline bool RayIntersectsBox(const Vector3& originInWorldSpace, 
+							const Vector3& rayInWorldSpace, 
+							CacheFriendlyBVHNode *pBox)
 {
     // set Tnear = - infinity, Tfar = infinity
     //
@@ -158,14 +160,8 @@ class RaytraceScanline {
     Screen& canvas;
     int& y;
 public:
-    RaytraceScanline(
-	const Scene& scene, const Camera& e, Screen& c,
-	int& scanline)
-	:
-	scene(scene),
-	eye(e),
-	canvas(c),
-	y(scanline)
+    RaytraceScanline( const Scene& scene, const Camera& e, Screen& c, int& scanline)
+	: scene(scene), eye(e), canvas(c), y(scanline)
     {}
 
     // Templated member - offers two compile-time options:
@@ -612,35 +608,32 @@ public:
 #endif
 };
 
-int CountBoxes(BVHNode *root)
-{
-    if (!root->IsLeaf()) {
-	BVHInner *p = dynamic_cast<BVHInner*>(root);
-	return 1 + CountBoxes(p->_left) + CountBoxes(p->_right);
-    } else
-	return 1;
+int CountBoxes(BVHNode *root) {
+	if (!root->IsLeaf()) {
+		BVHInner *p = dynamic_cast<BVHInner*>(root);
+		return 1 + CountBoxes(p->_left) + CountBoxes(p->_right);
+	} else
+		return 1;
 }
 
-unsigned CountTriangles(BVHNode *root)
-{
-    if (!root->IsLeaf()) {
-	BVHInner *p = dynamic_cast<BVHInner*>(root);
-	return CountTriangles(p->_left) + CountTriangles(p->_right);
-    } else {
-	BVHLeaf *p = dynamic_cast<BVHLeaf*>(root);
-	return (unsigned) p->_triangles.size();
+unsigned CountTriangles(BVHNode *root) {
+	if (!root->IsLeaf()) {
+		BVHInner *p = dynamic_cast<BVHInner*>(root);
+		return CountTriangles(p->_left) + CountTriangles(p->_right);
+	} else {
+		BVHLeaf *p = dynamic_cast<BVHLeaf*>(root);
+		return (unsigned) p->_triangles.size();
     }
 }
 
-void CountDepth(BVHNode *root, int depth, int& maxDepth)
-{
-    if (maxDepth<depth)
-	maxDepth=depth;
-    if (!root->IsLeaf()) {
-	BVHInner *p = dynamic_cast<BVHInner*>(root);
-	CountDepth(p->_left, depth+1, maxDepth);
-	CountDepth(p->_right, depth+1, maxDepth);
-    }
+void CountDepth(BVHNode *root, int depth, int& maxDepth) {
+	if (maxDepth<depth)
+		maxDepth=depth;
+	if (!root->IsLeaf()) {
+		BVHInner *p = dynamic_cast<BVHInner*>(root);
+		CountDepth(p->_left, depth+1, maxDepth);
+		CountDepth(p->_right, depth+1, maxDepth);
+	}
 }
 
 void Scene::PopulateCacheFriendlyBVH(
