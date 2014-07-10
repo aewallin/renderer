@@ -56,10 +56,10 @@ struct Scene {
 	{}
 
     // Load object
-    void load(const char *filename);
+    void load(const char *filename); // Loader.cc
 
     // Update triangle normals
-    void fix_normals(void);
+    void fix_normals(void); // Loader.cc
 
     // Cache-friendly version of the Bounding Volume Hierarchy data
     // (creation functions)

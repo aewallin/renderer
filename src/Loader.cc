@@ -30,10 +30,12 @@
 #include <string.h>
 #include <assert.h>
 
+/*
 #include "lib3ds/types.h"
 #include "lib3ds/material.h"
 #include "lib3ds/mesh.h"
 #include "lib3ds/file.h"
+*/
 
 #include "3d.h"
 #include "Defines.h"
@@ -50,7 +52,7 @@ namespace enums {
 }
 
 using namespace enums;
-
+/*
 struct MaterialColors {
 
     MaterialColors(
@@ -72,7 +74,7 @@ struct MaterialColors {
     const Lib3dsRgba& _diffuse;
     const Lib3dsRgba& _specular;
     bool _twoSided;
-};
+};*/
 
 const coord Scene::MaxCoordAfterRescale = 1.2f;
 
@@ -266,7 +268,9 @@ void Scene::load(const char *filename)
             }
             fclose(fp);
             fix_normals();
-        } else if (!strcmp(dt, "3ds") || !strcmp(dt, "3DS")) {
+        } 
+        /*
+        else if (!strcmp(dt, "3ds") || !strcmp(dt, "3DS")) {
             int i = 0;
             Lib3dsFile* p3DS = lib3ds_file_load(filename);
             if (!p3DS)
@@ -320,9 +324,12 @@ void Scene::load(const char *filename)
                         assert(_vertices.size() < _vertices.capacity());
                         _vertices.push_back(
                             Vertex(
-                                /*p3DS->master_scale* */pMesh->pointL[pointIdx].pos[0],
-                                /*p3DS->master_scale* */pMesh->pointL[pointIdx].pos[1],
-                                /*p3DS->master_scale* */pMesh->pointL[pointIdx].pos[2],
+                                // p3DS->master_scale
+                                pMesh->pointL[pointIdx].pos[0],
+                                // p3DS->master_scale
+                                pMesh->pointL[pointIdx].pos[1],
+                                // p3DS->master_scale
+                                pMesh->pointL[pointIdx].pos[2],
                                 nr._x,
                                 nr._y,
                                 nr._z));
@@ -343,7 +350,8 @@ void Scene::load(const char *filename)
                 currentTotalPoints += 3*pMesh->faces;
                 pMesh = pMesh->next;
             }
-        } else if (!strcmp(dt, "PLY") || !strcmp(dt, "ply")) {
+        } */
+        else if (!strcmp(dt, "PLY") || !strcmp(dt, "ply")) {
             // Only shadevis generated objects, not full blown parser!
             std::ifstream file(filename, std::ios::in);
             if (!file) {
