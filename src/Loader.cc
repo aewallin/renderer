@@ -30,13 +30,6 @@
 #include <string.h>
 #include <assert.h>
 
-/*
-#include "lib3ds/types.h"
-#include "lib3ds/material.h"
-#include "lib3ds/mesh.h"
-#include "lib3ds/file.h"
-*/
-
 #include "3d.h"
 #include "Defines.h"
 #include "Exceptions.h"
@@ -52,29 +45,6 @@ namespace enums {
 }
 
 using namespace enums;
-/*
-struct MaterialColors {
-
-    MaterialColors(
-        const Lib3dsRgba& ambient, const Lib3dsRgba& diffuse, const Lib3dsRgba& specular, bool twoSided)
-        :
-        _ambient(ambient), _diffuse(diffuse), _specular(specular), _twoSided(twoSided)
-        {}
-
-    template <ColorComponent c>
-    unsigned getByteAmbient() const { return unsigned(255.0*_ambient[c]); }
-
-    template <ColorComponent c>
-    unsigned getByteDiffuse() const { return unsigned(255.0*_diffuse[c]); }
-
-    template <ColorComponent c>
-    unsigned getByteSpecularRed() const { return unsigned(255.0*_specular[c]); }
-
-    const Lib3dsRgba& _ambient;
-    const Lib3dsRgba& _diffuse;
-    const Lib3dsRgba& _specular;
-    bool _twoSided;
-};*/
 
 const coord Scene::MaxCoordAfterRescale = 1.2f;
 
@@ -121,7 +91,9 @@ void Scene::load(const char *filename)
             Uint32 totalPoints = 0, totalTris = 0;
             Uint32 magic;
 
-            fread(&magic, 1, sizeof(Uint32), fp);
+            if ( !fread(&magic, 1, sizeof(Uint32), fp) )
+				assert(0);
+
             if (magic != TRI_MAGIC && magic != TRI_MAGICNORMAL) {
                 // No magic, just vertices and points (no normals, no colors)
                 fseek(fp, 0, SEEK_SET);
@@ -269,88 +241,6 @@ void Scene::load(const char *filename)
             fclose(fp);
             fix_normals();
         } 
-        /*
-        else if (!strcmp(dt, "3ds") || !strcmp(dt, "3DS")) {
-            int i = 0;
-            Lib3dsFile* p3DS = lib3ds_file_load(filename);
-            if (!p3DS)
-                THROW("Lib3DS couldn't load this .3ds file");
-            lib3ds_file_eval(p3DS, 0);
-
-            Lib3dsDword currentTotalTris = 0;
-            Lib3dsMesh *pMesh = p3DS->meshes;
-            if (!pMesh)
-                THROW("This .3ds file has no meshes")
-            std::map<Lib3dsMesh*, Lib3dsVector*> normals;
-            while(pMesh) {
-                currentTotalTris   += pMesh->faces;
-                Lib3dsVector *pMeshNormals = new Lib3dsVector[3*pMesh->faces];
-                lib3ds_mesh_calculate_normals(pMesh, pMeshNormals);
-                normals[pMesh] = pMeshNormals;
-                pMesh = pMesh->next;
-            }
-            _vertices.reserve(3*currentTotalTris);
-            _triangles.reserve(currentTotalTris);
-            std::map<string, MaterialColors> colors;
-            Lib3dsMaterial *pMaterial = p3DS->materials;
-            while(pMaterial) {
-                colors.insert(
-                    std::map<string, MaterialColors>::value_type(
-                        string(pMaterial->name),
-                        MaterialColors(pMaterial->ambient, pMaterial->diffuse,  pMaterial->specular, pMaterial->two_sided!=0)));
-                pMaterial = pMaterial->next;
-            }
-            pMesh = p3DS->meshes;
-            int currentTotalPoints = 0;
-            while(pMesh) {
-                if (!pMesh->pointL) { pMesh=pMesh->next; continue; }
-                if (!pMesh->faceL)  { pMesh=pMesh->next; continue; }
-                for(i=0; i<(int)pMesh->faces; i++) {
-                    std::map<string, MaterialColors>::iterator pMat = colors.find(string(pMesh->faceL[i].material));
-                    unsigned r, g, b;
-                    if (pMat != colors.end()) {
-                        r = pMat->second.getByteDiffuse<Red>();
-                        g = pMat->second.getByteDiffuse<Green>();
-                        b = pMat->second.getByteDiffuse<Blue>();
-                    } else {
-                        r = g = b = 255;
-                    }
-                    for (int k=0; k<3; k++) {
-                        int pointIdx = pMesh->faceL[i].points[k];
-                        Vector3 nr(
-                            normals[pMesh][3*i+k][0],
-                            normals[pMesh][3*i+k][1],
-                            normals[pMesh][3*i+k][2]);
-                        assert(_vertices.size() < _vertices.capacity());
-                        _vertices.push_back(
-                            Vertex(
-                                // p3DS->master_scale
-                                pMesh->pointL[pointIdx].pos[0],
-                                // p3DS->master_scale
-                                pMesh->pointL[pointIdx].pos[1],
-                                // p3DS->master_scale
-                                pMesh->pointL[pointIdx].pos[2],
-                                nr._x,
-                                nr._y,
-                                nr._z));
-                    }
-                    assert(_triangles.size() < _triangles.capacity());
-                    _triangles.push_back(
-                        Triangle(
-                            &_vertices[currentTotalPoints + 3*i],
-                            &_vertices[currentTotalPoints + 3*i + 1],
-                            &_vertices[currentTotalPoints + 3*i + 2],
-                            r, g, b,
-                            pMat->second._twoSided,
-                            true,
-                            Vector3(pMesh->faceL[i].normal[0],
-                                    pMesh->faceL[i].normal[1],
-                                    pMesh->faceL[i].normal[2]) ));
-                }
-                currentTotalPoints += 3*pMesh->faces;
-                pMesh = pMesh->next;
-            }
-        } */
         else if (!strcmp(dt, "PLY") || !strcmp(dt, "ply")) {
             // Only shadevis generated objects, not full blown parser!
             std::ifstream file(filename, std::ios::in);

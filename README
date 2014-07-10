@@ -3,6 +3,15 @@
 
 *Screenshots, official tarballs, etc available at [main renderer page](http://users.softlab.ntua.gr/~ttsiod/renderer.html)*
 
+## Simple cmake build
+
+There is now a CMakeLists.txt which allows out-of-source building with cmake, like this:
+
+$ mkdir bld
+$ cd bld
+$ cmake ..
+$ make
+
 ## Introduction
 
 This package allows interactive 3D visualization of triangle meshes.
