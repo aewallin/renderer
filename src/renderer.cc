@@ -21,7 +21,7 @@
 
 #include "SDL.h"
 
-#include <config.h>
+//#include <config.h>
 
 #include <algorithm>
 #include <iostream>

@@ -23,7 +23,7 @@
 // to determine optimal splitting.
 //
 
-#include "config.h"
+// #include "config.h"
 
 #include "SDL.h"
 
