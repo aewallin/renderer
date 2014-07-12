@@ -105,12 +105,15 @@ void Scene::load(const char *filename)
             unsigned currentTotalTris = 0;
             while(1) {
                 unsigned temp;
-                fread(&temp, 1, sizeof(Uint32), fp);
+                if( ! fread(&temp, 1, sizeof(Uint32), fp) )
+					assert(0);
+					
                 if (feof(fp))
                     break;
                 currentTotalPoints += temp;
                 fseek(fp, temp*(magic==TRI_MAGICNORMAL?24:12), SEEK_CUR);
-                fread(&temp, 1, sizeof(Uint32), fp);
+                if( ! fread(&temp, 1, sizeof(Uint32), fp) )
+					assert(0);
                 if (feof(fp))
                     break;
                 currentTotalTris += temp;
@@ -129,21 +132,23 @@ void Scene::load(const char *filename)
             fseek(fp, currentOffset, SEEK_SET);
             do {
                 Uint32 noOfPoints;
-                fread(&noOfPoints, 1, sizeof(Uint32), fp);
+                if (! fread(&noOfPoints, 1, sizeof(Uint32), fp))
+					assert(0);
                 if (feof(fp))
                     break;
 
                 for(Uint32 i=0; i<noOfPoints; i++) {
                     float x,y,z;
-                    fread(&x,1,4,fp); if (feof(fp)) { THROW("Malformed 3D file"); }
-                    fread(&y,1,4,fp); if (feof(fp)) { THROW("Malformed 3D file"); }
-                    fread(&z,1,4,fp); if (feof(fp)) { THROW("Malformed 3D file"); }
+                    size_t bytes_read=0;
+                    bytes_read=fread(&x,1,4,fp); if (feof(fp) || !bytes_read) { THROW("Malformed 3D file"); }
+                    bytes_read=fread(&y,1,4,fp); if (feof(fp) || !bytes_read) { THROW("Malformed 3D file"); }
+                    bytes_read=fread(&z,1,4,fp); if (feof(fp) || !bytes_read) { THROW("Malformed 3D file"); }
 
                     float nx=0.,ny=0.,nz=0.;
                     if (magic == TRI_MAGICNORMAL) {
-                        fread(&nx,1,4,fp); if (feof(fp)) { THROW("Malformed 3D file"); }
-                        fread(&ny,1,4,fp); if (feof(fp)) { THROW("Malformed 3D file"); }
-                        fread(&nz,1,4,fp); if (feof(fp)) { THROW("Malformed 3D file"); }
+                        bytes_read=fread(&nx,1,4,fp); if (feof(fp) || !bytes_read) { THROW("Malformed 3D file"); }
+                        bytes_read=fread(&ny,1,4,fp); if (feof(fp) || !bytes_read) { THROW("Malformed 3D file"); }
+                        bytes_read=fread(&nz,1,4,fp); if (feof(fp) || !bytes_read) { THROW("Malformed 3D file"); }
                     } else {
                         nx = ny = nz = 0; // Will be calculated in fix_normals()
                     }
@@ -152,23 +157,26 @@ void Scene::load(const char *filename)
                 }
 
                 Uint32 noOfTris;
-                fread(&noOfTris, 1, sizeof(Uint32), fp);
+                if ( ! fread(&noOfTris, 1, sizeof(Uint32), fp) )
+					assert(0);
                 if (feof(fp)) { THROW("Malformed 3D file"); }
 
                 for(Uint32 i=0; i<noOfTris; i++) {
                     Uint32 idx1,idx2,idx3;
-                    fread(&idx1,1,4,fp); if (feof(fp)) { THROW("Malformed 3D file"); }
-                    fread(&idx2,1,4,fp); if (feof(fp)) { THROW("Malformed 3D file"); }
-                    fread(&idx3,1,4,fp); if (feof(fp)) { THROW("Malformed 3D file"); }
+                    size_t bytes_read=0;
+                    bytes_read=fread(&idx1,1,4,fp); if (feof(fp) || !bytes_read) { THROW("Malformed 3D file"); }
+                    bytes_read=fread(&idx2,1,4,fp); if (feof(fp) || !bytes_read) { THROW("Malformed 3D file"); }
+                    bytes_read=fread(&idx3,1,4,fp); if (feof(fp) || !bytes_read) { THROW("Malformed 3D file"); }
                     if (idx1>=(totalPoints+noOfPoints)) { THROW("Malformed 3D file (idx1)"); }
                     if (idx2>=(totalPoints+noOfPoints)) { THROW("Malformed 3D file (idx2)"); }
                     if (idx3>=(totalPoints+noOfPoints)) { THROW("Malformed 3D file (idx3)"); }
 
                     float r,g,b;
                     if (magic == TRI_MAGIC || magic == TRI_MAGICNORMAL) {
-                        fread(&r,1,4,fp); if (feof(fp)) { THROW("Malformed 3D file"); }
-                        fread(&g,1,4,fp); if (feof(fp)) { THROW("Malformed 3D file"); }
-                        fread(&b,1,4,fp); if (feof(fp)) { THROW("Malformed 3D file"); }
+						size_t bytes_read=0;
+                        bytes_read=fread(&r,1,4,fp); if (feof(fp) || !bytes_read) { THROW("Malformed 3D file"); }
+                        bytes_read=fread(&g,1,4,fp); if (feof(fp) || !bytes_read) { THROW("Malformed 3D file"); }
+                        bytes_read=fread(&b,1,4,fp); if (feof(fp) || !bytes_read) { THROW("Malformed 3D file"); }
                         r*=255.; g*=255.; b*=255.;
                     } else {
                         r = g = b = 255.0; // No colors? White, then... :-(
@@ -207,9 +215,10 @@ void Scene::load(const char *filename)
             // Now load them inside the std::vectors...
             for(Uint32 i=0; i<totalPoints; i++) {
                 float x,y,z;
-                fread(&y,1,4,fp); if (feof(fp)) { fclose(fp); THROW("Malformed 3D file"); }
-                fread(&z,1,4,fp); if (feof(fp)) { fclose(fp); THROW("Malformed 3D file"); }
-                fread(&x,1,4,fp); if (feof(fp)) { fclose(fp); THROW("Malformed 3D file"); }
+                size_t bytes_read=0;
+                bytes_read=fread(&y,1,4,fp); if (feof(fp) || !bytes_read) { fclose(fp); THROW("Malformed 3D file"); }
+                bytes_read=fread(&z,1,4,fp); if (feof(fp) || !bytes_read) { fclose(fp); THROW("Malformed 3D file"); }
+                bytes_read=fread(&x,1,4,fp); if (feof(fp) || !bytes_read) { fclose(fp); THROW("Malformed 3D file"); }
 
                 float nx=0.,ny=0.,nz=0.;
                 assert(_vertices.size() < _vertices.capacity());
