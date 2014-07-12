@@ -20,7 +20,7 @@
 #ifndef __scene_h__
 #define __scene_h__
 
-#include <list>
+// #include <list>
 
 #include "Base3d.h"
 #include "BVH.h"

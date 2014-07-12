@@ -23,18 +23,7 @@
 #include <sstream>
 #include <cfloat>
 
-/*
-#ifdef USE_TBB
-#include "tbb/blocked_range.h"
-#include "tbb/parallel_for.h"
-#endif
-*/
-
-#define USE_OPENMP
-
-#ifdef USE_OPENMP
 #include <omp.h>
-#endif
 
 #include "3d.h"
 #include "Screen.h"
@@ -48,6 +37,7 @@
 //    RENDER_RAYTRACE
 //    RENDER_RAYTRACE_ANTIALIAS
 ///////////////////////////////////////////////
+// MODE 9 and MODE 0
 
 /////////////////////////////////
 // Raytracing configuration
@@ -56,7 +46,7 @@
 #define USE_PHONG_NORMAL
 
 // What depth to stop reflections and refractions?
-#define MAX_RAY_DEPTH	    3
+#define MAX_RAY_DEPTH   3
 
 // Ray intersections of a distance <=NUDGE_FACTOR (from the origin) don't count
 #define NUDGE_FACTOR     1e-5f
@@ -309,11 +299,10 @@ public:
     // Templated member - offers a single compile-time option, whether we are doing culling or not.
     // This is used in the recursive call this member makes (!) to enable backface culling for reflection rays,
     // but disable it for refraction rays.
-    //
     // Class-nested C++ recursion, provided via templates...
-    template <bool doCulling>
-    Pixel Raytrace(Vector3 originInWorldSpace, Vector3 rayInWorldSpace, const Triangle *avoidSelf, int depth) const
-    {
+template <bool doCulling>
+Pixel Raytrace(Vector3 originInWorldSpace, Vector3 rayInWorldSpace, const Triangle *avoidSelf, int depth) const
+{
 	if (depth >= MAX_RAY_DEPTH)
 	    return Pixel(0.,0.,0.);
 
@@ -323,9 +312,9 @@ public:
 
 	// Use the surface-area heuristic based, bounding volume hierarchy of axis-aligned bounding boxes
 	// (keywords: SAH, BVH, AABB)
-	if (!BVH_IntersectTriangles<false,doCulling>(
+	if ( !BVH_IntersectTriangles<false,doCulling>(
 		originInWorldSpace, rayInWorldSpace, avoidSelf,
-		pBestTri, pointHitInWorldSpace, kAB, kBC, kCA))
+		pBestTri, pointHitInWorldSpace, kAB, kBC, kCA) )
 	    // We pierced no triangle, return with no contribution (ambient is black)
 	    return Pixel(0.,0.,0.);
 
@@ -408,9 +397,9 @@ public:
 	    if (!BVH_IntersectTriangles<true,true>(
 		    pointHitInWorldSpace, ambientRay, avoidSelf,
 		    dummy, temp, kAB, kAB, kAB)) {
-		// Accumulate contribution of this random ray
-		totalLight += cosangle;
-	    }
+			// Accumulate contribution of this random ray
+			totalLight += cosangle;
+		}
 	}
 	// total ambient light, averaged over all random rays
 	color *= (AMBIENT/255.0)*(totalLight/maxLight);
@@ -549,68 +538,60 @@ public:
 	    + Raytrace<false>(originInWorldSpace, refractedRay, avoidSelf, depth+1) * REFRACTIONS_RATE
 #endif
 	    ;
-    }
+}
 
-    void RaytraceHorizontalSegment(int xStarting, int iOnePastEndingX) const
-    {
-#ifdef USE_OPENMP
+void RaytraceHorizontalSegment(int xStarting, int iOnePastEndingX) const {
 	#pragma omp parallel for schedule(dynamic,10)
-#endif
 	for(int x=xStarting; x<iOnePastEndingX; x++) {
 	    Pixel finalColor(0,0,0);
 
 	    int pixelsTraced = 1;
-	    if (antialias)
-		pixelsTraced = 4;
+		if (antialias)
+			pixelsTraced = 4;
 
-	    while(pixelsTraced--) {
-		// We will shoot a ray in camera space (from Eye to the screen point, so in camera
-		// space, from (0,0,0) to this:
-		coord xx = (coord)x;
-		coord yy = (coord)y;
+		while(pixelsTraced--) {
+			// We will shoot a ray in camera space (from Eye to the screen point, so in camera
+			// space, from (0,0,0) to this:
+			coord xx = (coord)x;
+			coord yy = (coord)y;
 
-		if (antialias) {
-		    // nudge in a cross pattern around the pixel center
-		    xx += 0.25f - .5f*(pixelsTraced&1);
-		    yy += 0.25f - .5f*((pixelsTraced&2)>>1);
-		}
-		coord lx = coord((HEIGHT/2)-yy)/SCREEN_DIST;
-		coord ly = coord(xx-(WIDTH/2))/SCREEN_DIST;
-		coord lz = 1.0;
-		Vector3 rayInCameraSpace(lx,ly,lz);
-		rayInCameraSpace.normalize();
+			if (antialias) {
+				// nudge in a cross pattern around the pixel center
+				xx += 0.25f - .5f*(pixelsTraced&1);
+				yy += 0.25f - .5f*((pixelsTraced&2)>>1);
+			}
+			coord lx = coord((HEIGHT/2)-yy)/SCREEN_DIST;
+			coord ly = coord(xx-(WIDTH/2))/SCREEN_DIST;
+			coord lz = 1.0;
+			Vector3 rayInCameraSpace(lx,ly,lz);
+			rayInCameraSpace.normalize();
 
-		// We will need the origin in world space
-		Vector3 originInWorldSpace = eye;
+			// We will need the origin in world space
+			Vector3 originInWorldSpace = eye;
 
-		// We have a rayInCameraSpace, and we want to use the BVH, which was constructed
-		// in World space, so we convert the ray in World space
-		Vector3 rayInWorldSpace = eye._mv._row1 * rayInCameraSpace._x;
-		rayInWorldSpace += eye._mv._row2 * rayInCameraSpace._y;
-		rayInWorldSpace += eye._mv._row3 * rayInCameraSpace._z;
-		// in theory, this should not be required
-		rayInWorldSpace.normalize();
+			// We have a rayInCameraSpace, and we want to use the BVH, which was constructed
+			// in World space, so we convert the ray in World space
+			Vector3 rayInWorldSpace = eye._mv._row1 * rayInCameraSpace._x;
+			rayInWorldSpace += eye._mv._row2 * rayInCameraSpace._y;
+			rayInWorldSpace += eye._mv._row3 * rayInCameraSpace._z;
+			// in theory, this should not be required
+			rayInWorldSpace.normalize();
 
-		// Primary ray, we want backface culling: <true>
-		finalColor += Raytrace<true>(originInWorldSpace, rayInWorldSpace, NULL, 0);
+			// Primary ray, we want backface culling: <true>
+			finalColor += Raytrace<true>(originInWorldSpace, rayInWorldSpace, NULL, 0);
 	    }
 	    if (antialias)
-		finalColor /= 4.;
-	    if (finalColor._r>255.0f) finalColor._r=255.0f;
-	    if (finalColor._g>255.0f) finalColor._g=255.0f;
-	    if (finalColor._b>255.0f) finalColor._b=255.0f;
-	    canvas.DrawPixel(y,x, SDL_MapRGB(
-		canvas._surface->format, (Uint8)finalColor._r, (Uint8)finalColor._g, (Uint8)finalColor._b));
+			finalColor /= 4.;
+		if (finalColor._r>255.0f) finalColor._r=255.0f;
+		if (finalColor._g>255.0f) finalColor._g=255.0f;
+		if (finalColor._b>255.0f) finalColor._b=255.0f;
+		canvas.DrawPixel(y,x, SDL_MapRGB( canvas._surface->format, 
+		 (Uint8)finalColor._r, (Uint8)finalColor._g, (Uint8)finalColor._b) );
 	}
-    }
+}
 
-#ifdef USE_TBB
-    // TBB expects functors, and this one simply delegates to DrawTriangles
-    void operator()(const tbb::blocked_range<size_t>& r) const {
-	RaytraceHorizontalSegment(r.begin(), r.end());
-    }
-#endif
-};
+
+}; // end class RaytraceScanline
 
 int CountBoxes(BVHNode *root) {
 	if (!root->IsLeaf()) {
@@ -650,24 +631,24 @@ void Scene::PopulateCacheFriendlyBVH(
     _pCFBVH[currIdxBoxes]._bottom = root->_bottom;
     _pCFBVH[currIdxBoxes]._top    = root->_top;
     if (!root->IsLeaf()) {
-	BVHInner *p = dynamic_cast<BVHInner*>(root);
-	int idxLeft = ++idxBoxes;
-	PopulateCacheFriendlyBVH(pFirstTriangle, p->_left, idxBoxes, idxTriList);
-	int idxRight = ++idxBoxes;
-	PopulateCacheFriendlyBVH(pFirstTriangle, p->_right, idxBoxes, idxTriList);
-	_pCFBVH[currIdxBoxes].u.inner._idxLeft  = idxLeft;
-	_pCFBVH[currIdxBoxes].u.inner._idxRight = idxRight;
+		BVHInner *p = dynamic_cast<BVHInner*>(root);
+		int idxLeft = ++idxBoxes;
+		PopulateCacheFriendlyBVH(pFirstTriangle, p->_left, idxBoxes, idxTriList);
+		int idxRight = ++idxBoxes;
+		PopulateCacheFriendlyBVH(pFirstTriangle, p->_right, idxBoxes, idxTriList);
+		_pCFBVH[currIdxBoxes].u.inner._idxLeft  = idxLeft;
+		_pCFBVH[currIdxBoxes].u.inner._idxRight = idxRight;
     } else {
-	BVHLeaf *p = dynamic_cast<BVHLeaf*>(root);
-	unsigned count = (unsigned) p->_triangles.size();
-	_pCFBVH[currIdxBoxes].u.leaf._count = 0x80000000 | count;
-	_pCFBVH[currIdxBoxes].u.leaf._startIndexInTriIndexList = idxTriList;
-	for(std::list<const Triangle*>::iterator it=p->_triangles.begin();
-	    it != p->_triangles.end();
-	    ++it)
-	{
-	    _triIndexList[idxTriList++] = *it - pFirstTriangle;
-	}
+		BVHLeaf *p = dynamic_cast<BVHLeaf*>(root);
+		unsigned count = (unsigned) p->_triangles.size();
+		_pCFBVH[currIdxBoxes].u.leaf._count = 0x80000000 | count;
+		_pCFBVH[currIdxBoxes].u.leaf._startIndexInTriIndexList = idxTriList;
+		for(std::list<const Triangle*>::iterator it=p->_triangles.begin();
+			it != p->_triangles.end();
+			++it)
+		{
+			_triIndexList[idxTriList++] = *it - pFirstTriangle;
+		}
     }
 }
 
@@ -783,70 +764,54 @@ bool Scene::renderRaytracer(Camera& eye, Screen& canvas, bool antialias)
     UpdateBoundingVolumeHierarchy(g_filename);
 
     if (needToUpdateTitleBar) {
-	// A BVH calculation just occured, the title bar is still saying:
-	//    "Creating Bounding Volume Hierarchy data... (SAH/AABB)"
-	// Update it, we are now raytracing...
-	const char *modeMsg;
-	if (antialias)
-	    modeMsg = "Raytracing with antialiasing";
-	else
-	    modeMsg = "Raytracing";
-	SDL_WM_SetCaption(modeMsg, modeMsg);
+		// A BVH calculation just occured, the title bar is still saying:
+		//    "Creating Bounding Volume Hierarchy data... (SAH/AABB)"
+		// Update it, we are now raytracing...
+		const char *modeMsg;
+		if (antialias)
+			modeMsg = "Raytracing with antialiasing";
+		else
+			modeMsg = "Raytracing";
+		SDL_WM_SetCaption(modeMsg, modeMsg);
     }
 
     Keyboard keys;
 
     // Main loop: for each pixel...
     for(int y=0; y<HEIGHT; y++) {
-#ifdef USE_TBB
-	// For TBB, use the parallel_for construct.
-	// Different threads will execute for segments of the current scanline,
-	// calling the operator(), which in turn calls RaytraceHorizontalSegment for the segment.
-	// We use the third parameter of parallel_for to chop the triangle list down
-	// into batches of 10 horizontal pixels - the dynamic scheduler will feed these batches
-	// to our threads, keeping them busy (just like schedule(dynamic,10) for OpenMP)
-	if (antialias)
-	    tbb::parallel_for(
-		tbb::blocked_range<size_t>(0, WIDTH, 10),
-		RaytraceScanline<true>(*this, eye, canvas, y) );
-	else
-	    tbb::parallel_for(
-		tbb::blocked_range<size_t>(0, WIDTH, 10),
-		RaytraceScanline<false>(*this, eye, canvas, y) );
-#else
-	// For both OpenMP and single-threaded, call the RaytraceHorizontalSegment member
-	// of the RaytraceScanline, requesting drawing of ALL the scanline.
-	// For OpenMP, the appropriate pragma inside RaytraceHorizontalSegment will make it execute via SMP...
-	if (antialias)
-	    RaytraceScanline<true>(*this, eye, canvas, y).RaytraceHorizontalSegment(0, WIDTH);
-	else
-	    RaytraceScanline<false>(*this, eye, canvas, y).RaytraceHorizontalSegment(0, WIDTH);
-#endif
 
-#ifdef HANDLERAYTRACER
-	// Since raytracing takes time, allow the user to abort:
-	extern bool g_benchmark;
-	keys.poll(false); // false=no yielding, we want speed!
-	if (keys._isAbort) {
-	    while(keys._isAbort) keys.poll(false);
-	    if (!g_benchmark)
-		return false;
-	    else
-		exit(1);
-	}
+		// For both OpenMP and single-threaded, call the RaytraceHorizontalSegment member
+		// of the RaytraceScanline, requesting drawing of ALL the scanline.
+		// For OpenMP, the appropriate pragma inside RaytraceHorizontalSegment will make it execute via SMP...
+		if (antialias)
+			RaytraceScanline<true>(*this, eye, canvas, y).RaytraceHorizontalSegment(0, WIDTH);
+		else
+			RaytraceScanline<false>(*this, eye, canvas, y).RaytraceHorizontalSegment(0, WIDTH);
 
-	// And every 16 scanlines, show the buffer...
-	if (15 == (y&15)) {
-	    std::stringstream percentage;
-	    if (antialias) percentage << "Anti-aliased r"; else percentage << "R";
-	    percentage << "aytracing... hit ESCAPE to abort (" << int(100.*y/HEIGHT) << "%)";
-	    static char asyncBufferForCaption[256];
-	    strcpy(asyncBufferForCaption, percentage.str().c_str());
-	    SDL_WM_SetCaption(asyncBufferForCaption, asyncBufferForCaption);
-	    canvas.ShowScreen(true,false);
-	}
-#endif
-    }
+	#ifdef HANDLERAYTRACER
+		// Since raytracing takes time, allow the user to abort:
+		extern bool g_benchmark;
+		keys.poll(false); // false=no yielding, we want speed!
+		if (keys._isAbort) {
+			while(keys._isAbort) keys.poll(false);
+			if (!g_benchmark)
+			return false;
+			else
+			exit(1);
+		}
+
+		// And every 16 scanlines, show the buffer...
+		if (15 == (y&15)) {
+			std::stringstream percentage;
+			if (antialias) percentage << "Anti-aliased r"; else percentage << "R";
+			percentage << "aytracing... hit ESCAPE to abort (" << int(100.*y/HEIGHT) << "%)";
+			static char asyncBufferForCaption[256];
+			strcpy(asyncBufferForCaption, percentage.str().c_str());
+			SDL_WM_SetCaption(asyncBufferForCaption, asyncBufferForCaption);
+			canvas.ShowScreen(true,false);
+		}
+	#endif
+    } // end y loop
     canvas.ShowScreen(true,true);
     return true;
 }
