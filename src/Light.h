@@ -38,25 +38,21 @@ struct Light : public Vector3
     // Shadow buffer, used in modes 7 and 8
     coord _shadowBuffer[SHADOWMAPSIZE][SHADOWMAPSIZE];
 
-    Light(coord x, coord y, coord z)
-	:
-	Vector3(x,y,z)
-    {
-	ClearShadowBuffer();
-    }
+	Light(coord x, coord y, coord z)
+	: Vector3(x,y,z) {
+		ClearShadowBuffer();
+	}
 
-    void ClearShadowBuffer()
-    {
-	// For both float and double, a "body" of 0xFE..FE is a huge negative number
-	memset(reinterpret_cast<void*>(&_shadowBuffer[0][0]), 254, sizeof(_shadowBuffer));
+    void ClearShadowBuffer() {
+		// For both float and double, a "body" of 0xFE..FE is a huge negative number
+		memset(reinterpret_cast<void*>(&_shadowBuffer[0][0]), 254, sizeof(_shadowBuffer));
     }
 
     void PlotShadowPixel(int y, const Vector3& v);
-    void InterpolateTriangleOnShadowBuffer(
-	const Vector3& v1, const Vector3& v2, const Vector3& v3,
-	unsigned *lines,
-	Vector3 *left,
-	Vector3 *right);
+    void InterpolateTriangleOnShadowBuffer( const Vector3& v1, const Vector3& v2, const Vector3& v3,
+											unsigned *lines,
+											Vector3 *left,
+											Vector3 *right);
 
     void RenderSceneIntoShadowBuffer(const Scene&);
 

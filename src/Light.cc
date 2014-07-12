@@ -23,16 +23,9 @@
 #include <list>
 #include <fstream>
 
-#ifdef USE_OPENMP
 #include <omp.h>
-#endif
 
-#ifdef USE_TBB
-#include "tbb/blocked_range.h"
-#include "tbb/parallel_for.h"
-#endif
-
-#include <assert.h>
+#include <cassert>
 
 #include "3d.h"
 #include "Algebra.h"
@@ -87,19 +80,14 @@ class DrawSceneInShadowBuffer {
     Light& light;
 public:
     DrawSceneInShadowBuffer(const Scene& s, Matrix3& m, Light& l)
-	:
-	scene(s),
-	mv(m),
-	light(l)
+	: scene(s), mv(m), light(l)
     {}
-    void DrawTriangles(int iStartingTriangleIndex, int iOnePastEndingTriangleIndex) const
-    {
+
+void DrawTriangles(int iStartingTriangleIndex, int iOnePastEndingTriangleIndex) const {
 	std::vector<unsigned> lines;
 	std::vector<Vector3>  left;
 	std::vector<Vector3>  right;
-#if defined(USE_OPENMP)
 	#pragma omp parallel for private(lines, left, right) schedule(dynamic,TRIANGLES_PER_THREAD)
-#endif
 	for(int j=iStartingTriangleIndex; j<iOnePastEndingTriangleIndex; j++) {
 
 	    lines.resize(SHADOWMAPSIZE);
@@ -149,14 +137,8 @@ public:
 
 	    light.InterpolateTriangleOnShadowBuffer(xformedA, xformedB, xformedC, &lines[0], &left[0], &right[0]);
 	}
-    }
+}
 
-#ifdef USE_TBB
-    // TBB expects functors, and this one simply delegates to DrawTriangles
-    void operator()(const tbb::blocked_range<size_t>& r) const {
-	DrawTriangles(r.begin(), r.end());
-    }
-#endif
 };
 
 void Light::CalculatePositionInCameraSpace(const Camera& camera)
@@ -219,22 +201,10 @@ void Light::RenderSceneIntoShadowBuffer(const Scene& scene)
 {
     CalculateXformFromWorldToLightSpace();
 
-#ifdef USE_TBB
-    // For TBB, use the parallel_for construct.
-    // Different threads will execute for segments of the triangles' vector,
-    // calling the operator(), which in turn calls DrawTriangles for the vector's segment.
-    // We use the third parameter of parallel_for to chop the triangle list down
-    // into batches of 100 triangles - the dynamic scheduler will feed these batches
-    // to our threads, keeping them busy (just like schedule(dynamic,100) for OpenMP)
-    tbb::parallel_for(
-	tbb::blocked_range<size_t>(0, scene._triangles.size(), 100),
-	DrawSceneInShadowBuffer(scene, _worldToLightSpace, *this) );
-#else
     // For both OpenMP and single-threaded, call the DrawTriangles member
     // of the DrawSceneInShadowBuffer, requesting drawing of ALL triangles.
     // For OpenMP, the appropriate pragma inside DrawTriangles will make it execute via SMP...
     DrawSceneInShadowBuffer(scene, _worldToLightSpace, *this).DrawTriangles(0, scene._triangles.size());
-#endif
 
 #ifdef DUMP_SHADOWFILE
     fstream test("shadow", ios::binary | ios::out);
@@ -273,25 +243,25 @@ void Light::InterpolateTriangleOnShadowBuffer(
 
     // Time for linear interpolation
     for(int y=scanner._minimum; y<=scanner._maximum; y++) {
-	if (lines[y] == 1) {
-	    PlotShadowPixel(y, left[y]);
-	} else {
-	    int x1 = (int) left[y]._x;
-	    int x2 = (int) right[y]._x;
-	    int steps = abs(x2-x1);
-	    if (!steps) {
-		PlotShadowPixel(y, left[y]);
-		PlotShadowPixel(y, right[y]);
-	    } else {
-		Vector3 start = left[y];
-		Vector3 dLR = right[y]; dLR -= start; dLR /= (coord)steps;
-		PlotShadowPixel(y, start);
-		while(steps--) {
-		    start += dLR;
-		    PlotShadowPixel(y, start);
+		if (lines[y] == 1) {
+			PlotShadowPixel(y, left[y]);
+		} else {
+			int x1 = (int) left[y]._x;
+			int x2 = (int) right[y]._x;
+			int steps = abs(x2-x1);
+			if (!steps) {
+				PlotShadowPixel(y, left[y]);
+				PlotShadowPixel(y, right[y]);
+			} else {
+				Vector3 start = left[y];
+				Vector3 dLR = right[y]; dLR -= start; dLR /= (coord)steps;
+				PlotShadowPixel(y, start);
+				while(steps--) {
+					start += dLR;
+					PlotShadowPixel(y, start);
+				}
+			}
 		}
-	    }
-	}
     }
 }
 

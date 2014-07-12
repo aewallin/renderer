@@ -24,6 +24,7 @@
 #include "3d.h"
 #include "Screen.h"
 #include "Wu.h"
+#include "Fillers.h"
 
 // Clip distance for the triangles 
 // (if they have a point closer than this, they dont get drawn)
@@ -292,7 +293,7 @@ void RenderInParallel( Scene& scene, const Camera& eye, Screen& canvas) {
     canvas.ShowScreen();
 }
 
-#include "Fillers.h"
+
 
 void Scene::renderAmbient(const Camera& eye, Screen& canvas)
 {
