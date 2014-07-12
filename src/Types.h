@@ -22,60 +22,35 @@
 
 #include <algorithm>
 
-#include <math.h>
+#include <cmath>
 #include <SDL.h>
 
 // The main floating point type, used everywhere
 // If you need more accuracy for some reason, use "double" (30% speed hit)
 typedef float coord;
 
-struct Vector3
-{
-    union {
-	struct {
-	    coord _x, _y, _z;
-	};
-	coord _v[3];
-    };
+struct Vector3 {
+	coord _x, _y, _z;
 
 
     Vector3(coord x=0, coord y=0, coord z=0)
-	:
-	_x(x), _y(y), _z(z) {}
+	: _x(x), _y(y), _z(z) {}
 
     Vector3(const Vector3& rhs)
-	: 
-	_x(rhs._x), _y(rhs._y), _z(rhs._z) {}
+	:  _x(rhs._x), _y(rhs._y), _z(rhs._z) {}
 
-/* An abandoned experiment with intrinsics
- * (GCC proved to do just as good a job in optimizing with SSE)
-
-        __m128 tmp = _mm_loadu_ps(&_x);
-	__m128 l = _mm_mul_ps(tmp, tmp);
-	l = _mm_add_ps(l, _mm_shuffle_ps(l, l, 0x4E));
-	_mm_storeu_ps(&_x, _mm_mul_ps(tmp, _mm_rsqrt_ps(_mm_add_ps(l, _mm_shuffle_ps(l, l, 0x11)))));
-
- */
-    inline coord length()
-    {
-	return sqrt(_x*_x +_y*_y + _z*_z);
-    }
+    inline coord length() { return sqrt(_x*_x +_y*_y + _z*_z); }
 
     // in some place, we dont need the sqrt, we are just comparing one length with another
-    inline coord lengthsq()
-    {
-	return _x*_x +_y*_y + _z*_z;
+    inline coord lengthsq() { return _x*_x +_y*_y + _z*_z; }
+
+    inline void normalize() {
+		coord norm = length();
+		_x /= norm; _y /= norm; _z /= norm;
     }
 
-    inline void normalize()
-    {
-	coord norm = length();
-	_x /= norm; _y /= norm; _z /= norm;
-    }
-
-    inline Vector3& operator+=(const Vector3& rhs)
-    {
-	_x += rhs._x; _y += rhs._y; _z += rhs._z; return *this;
+    inline Vector3& operator+=(const Vector3& rhs) {
+		_x += rhs._x; _y += rhs._y; _z += rhs._z; return *this;
     }
 
     inline Vector3& operator-=(const Vector3& rhs)
@@ -124,8 +99,7 @@ struct Vector3
 struct Pixel {
     float _b, _g, _r;
     Pixel(float r=0.f, float g=0.f, float b=0.f)
-	:
-	_b(b), _g(g), _r(r) {}
+	: _b(b), _g(g), _r(r) {}
 
     Pixel& operator+=(const Pixel& rhs) { _b += rhs._b; _g += rhs._g; _r += rhs._r; return *this; }
     Pixel& operator-=(const Pixel& rhs) { _b -= rhs._b; _g -= rhs._g; _r -= rhs._r; return *this; }

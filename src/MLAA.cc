@@ -654,13 +654,13 @@ void MLAA(unsigned int* fbi, unsigned int* fb0, int resX, int resY, int job, int
           // In most cases though there is only one shape identified during
           // execution of these 4 loops.
 
-          int   ui0, ui1;
-          float uh0, uh1;
+          int   ui0=0, ui1=0;
+          float uh0=0, uh1=0;
           computeUpperBounds(ui0, ui1, uh0, uh1, 
                              fb0, fc,
                              x0 - stepx, x1, len, stepx, befor, after, resX*resY);
-          int   li0, li1;
-          float lh0, lh1;
+          int   li0=0, li1=0;
+          float lh0=0, lh1=0;
           computeLowerBounds(li0, li1, lh0, lh1, 
                              fb0, fc,
                              x0 - stepx, x1, len, stepx, befor, after, resX*resY);
